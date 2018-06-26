@@ -34,8 +34,8 @@ class DockerExecutor extends Executor {
     constructor(options) {
         super();
 
-        this.http_proxy = this.docker.http_proxy;
-        this.https_proxy = this.docker.https_proxy;
+        this.http_proxy = options.docker.http_proxy;
+        this.https_proxy = options.docker.https_proxy;
         this.ecosystem = options.ecosystem;
         this.docker = new Docker(options.docker);
         this.launchVersion = options.launchVersion || 'stable';
