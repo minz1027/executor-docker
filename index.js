@@ -23,6 +23,8 @@ class DockerExecutor extends Executor {
      * @param  {String} [options.docker.ca]                      Certificate authority
      * @param  {String} [options.docker.cert]                    Certificate to use
      * @param  {String} [options.docker.key]                     Key for the certificate
+     * @param  {String} [options.docker.http_proxy]              Http proxy available to build container
+     * @param  {String} [options.docker.https_proxy]             Https proxy available to build container
      * @param  {Object} [options.fusebox]                        Fusebox configuration
      * @param  {Object} [options.fusebox.breaker]                Breaker configuration
      * @param  {Number} [options.fusebox.breaker.timeout=300000] Timeout before retrying
@@ -32,6 +34,8 @@ class DockerExecutor extends Executor {
     constructor(options) {
         super();
 
+        this.http_proxy = this.docker.http_proxy;
+        this.https_proxy = this.docker.https_proxy;
         this.ecosystem = options.ecosystem;
         this.docker = new Docker(options.docker);
         this.launchVersion = options.launchVersion || 'stable';
@@ -124,6 +128,16 @@ class DockerExecutor extends Executor {
 
     _start(config) {
         const piecesParts = imageParser(config.container);
+        const Env = [];
+
+        if (this.http_proxy) {
+            Env.push(`HTTP_PROXY=${this.http_proxy}`);
+        }
+
+        if (this.https_proxy) {
+            Env.push(`HTTPS_PROXY=${this.https_proxy}`);
+        }
+
         let buildTag = piecesParts.tag;
         let buildImage = piecesParts.name;
 
@@ -163,6 +177,7 @@ class DockerExecutor extends Executor {
             ])
             .then((results) => {
                 config.token = results[0];
+                Env.push(`SD_TOKEN=${config.token}`);
 
                 return this._createContainer({
                     name: `${this.prefix}${config.buildId}-init`,
@@ -209,9 +224,7 @@ class DockerExecutor extends Executor {
                         'wait $(jobs -p)'
                     ].join(' ')
                 ],
-                Env: [
-                    `SD_TOKEN=${config.token}`
-                ],
+                Env,
                 HostConfig: {
                     // 2 GB of memory
                     Memory: 2 * 1024 * 1024 * 1024,
